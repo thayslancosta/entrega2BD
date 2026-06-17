@@ -1,0 +1,10 @@
+dao/LivroDAO.class
+model/Livro.class
+view/Main.class
+model/Usuario.class
+conexao/Conexao.class
+dao/EmprestimoDAO.class
+model/Aluno.class
+dao/UsuarioDAO.class
+model/Funcionario.class
+model/Emprestimo.class
