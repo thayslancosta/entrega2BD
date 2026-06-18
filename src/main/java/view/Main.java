@@ -59,13 +59,13 @@ public class Main {
                     menuFuncionario(conexao, livroDAO, emprestimoDAO, usuarioAutenticado);
                 }
             } catch (SQLException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                exibirErroBanco(e);
             } finally {
                 if (conexao != null) {
                     try {
                         conexao.fecharConexao();
                     } catch (SQLException e) {
-                        JOptionPane.showMessageDialog(null, e.getMessage());
+                        exibirErroBanco(e);
                     }
                 }
             }
@@ -112,7 +112,7 @@ public class Main {
                             builder.append("Empréstimo ID: ")
                                     .append(resultSet.getInt("id_emprestimo"))
                                     .append(" | Livro: ")
-                                    .append(resultSet.getString("id_livro_fk"))
+                                    .append(resultSet.getString("livro"))
                                     .append(" | Data: ")
                                     .append(resultSet.getString("data_saida"))
                                     .append('\n');
@@ -121,7 +121,7 @@ public class Main {
                     JOptionPane.showMessageDialog(null, builder.length() == 0 ? "Nenhum empréstimo encontrado." : builder.toString());
                 }
             } catch (SQLException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                exibirErroBanco(e);
             }
         }
     }
@@ -138,7 +138,7 @@ public class Main {
             try {
                 switch (opcao) {
                     case "1" -> cadastrarLivro(livroDAO);
-                    case "2" -> realizarEmprestimo(emprestimoDAO);
+                    case "2" -> realizarEmprestimo(emprestimoDAO, usuario);
                     case "3" -> renovarEmprestimo(emprestimoDAO);
                     case "4" -> devolverLivro(emprestimoDAO);
                     case "5" -> excluirLivro(livroDAO);
@@ -146,7 +146,7 @@ public class Main {
                     default -> JOptionPane.showMessageDialog(null, "Opção inválida.");
                 }
             } catch (SQLException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                exibirErroBanco(e);
             }
         }
     }
@@ -167,7 +167,7 @@ public class Main {
                     default -> JOptionPane.showMessageDialog(null, "Opção inválida.");
                 }
             } catch (SQLException e) {
-                JOptionPane.showMessageDialog(null, e.getMessage());
+                exibirErroBanco(e);
             }
         }
     }
@@ -231,11 +231,12 @@ public class Main {
         JOptionPane.showMessageDialog(null, "Livro cadastrado com sucesso.");
     }
 
-    private static void realizarEmprestimo(EmprestimoDAO emprestimoDAO) throws SQLException {
+    private static void realizarEmprestimo(EmprestimoDAO emprestimoDAO, Usuario usuario) throws SQLException {
         int idUsuario = Integer.parseInt(JOptionPane.showInputDialog(null, "ID do usuário:"));
         int idLivro = Integer.parseInt(JOptionPane.showInputDialog(null, "ID do livro:"));
+        int prazo = usuario.getDiasPrazoEmprestimo();
         emprestimoDAO.realizarEmprestimo(idUsuario, idLivro);
-        JOptionPane.showMessageDialog(null, "Empréstimo realizado com sucesso.");
+        JOptionPane.showMessageDialog(null, "Empréstimo realizado com sucesso. Prazo: " + prazo + " dias.");
     }
 
     private static void renovarEmprestimo(EmprestimoDAO emprestimoDAO) throws SQLException {
@@ -261,7 +262,7 @@ public class Main {
             livroDAO.deletar(idLivro);
             JOptionPane.showMessageDialog(null, "Livro excluído com sucesso.");
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, "ERRO: Acesso Negado! Seu perfil de usuário não tem permissão para excluir registros do sistema.");
+            exibirErroBanco(e);
         }
     }
 
@@ -275,5 +276,28 @@ public class Main {
             builder.append(livro.toStringPublico()).append('\n');
         }
         return builder.toString();
+    }
+
+    private static void exibirErroBanco(SQLException e) {
+        if (isErroPermissao(e)) {
+            JOptionPane.showMessageDialog(null,
+                    "Não foi possível acessar esta informação com o perfil selecionado.\n"
+                            + "Verifique se você entrou com o usuário correto ou procure a biblioteca.");
+            return;
+        }
+
+        JOptionPane.showMessageDialog(null, "Não foi possível concluir a operação. Tente novamente.");
+    }
+
+    private static boolean isErroPermissao(SQLException e) {
+        String estadoSql = e.getSQLState();
+        int codigoErro = e.getErrorCode();
+        String mensagem = e.getMessage();
+
+        return "42000".equals(estadoSql)
+                || codigoErro == 1142
+                || codigoErro == 1044
+                || codigoErro == 1045
+                || (mensagem != null && mensagem.toLowerCase().contains("denied"));
     }
 }

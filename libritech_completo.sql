@@ -116,6 +116,7 @@ GRANT SELECT         ON db_libritech.Usuarios    TO 'usr_estagiario'@'localhost'
 
 GRANT SELECT ON db_libritech.vw_acervo_publico  TO 'usr_aluno'@'localhost';
 GRANT SELECT ON db_libritech.vw_ranking_leitura TO 'usr_aluno'@'localhost';
+GRANT SELECT ON db_libritech.vw_emprestimos_aluno TO 'usr_aluno'@'localhost';
 GRANT SELECT ON db_libritech.Usuarios           TO 'usr_aluno'@'localhost';
 
 FLUSH PRIVILEGES;
@@ -158,6 +159,16 @@ CREATE OR REPLACE VIEW vw_ranking_leitura AS
     GROUP BY l.id_livro, l.titulo, l.autor
     ORDER BY total_emprestimos DESC
     LIMIT 10;
+
+CREATE OR REPLACE VIEW vw_emprestimos_aluno AS
+    SELECT
+        e.id_emprestimo,
+        l.titulo AS livro,
+        e.data_saida,
+        e.data_prevista,
+        e.data_devolucao
+    FROM Emprestimos e
+    JOIN Livros l ON e.id_livro_fk = l.id_livro;
 
 CREATE OR REPLACE VIEW vw_dashboard_financeiro AS
     SELECT
@@ -328,6 +339,26 @@ END$$
 
 CREATE TRIGGER trg_trava_horario_emprestimos
 BEFORE INSERT ON Emprestimos
+FOR EACH ROW
+BEGIN
+    IF HOUR(NOW()) < 8 OR HOUR(NOW()) >= 18 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'ERRO: Operacoes permitidas apenas em horario comercial (08h as 18h).';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_trava_horario_livros_update
+BEFORE UPDATE ON Livros
+FOR EACH ROW
+BEGIN
+    IF HOUR(NOW()) < 8 OR HOUR(NOW()) >= 18 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'ERRO: Operacoes permitidas apenas em horario comercial (08h as 18h).';
+    END IF;
+END$$
+
+CREATE TRIGGER trg_trava_horario_emprestimos_update
+BEFORE UPDATE ON Emprestimos
 FOR EACH ROW
 BEGIN
     IF HOUR(NOW()) < 8 OR HOUR(NOW()) >= 18 THEN

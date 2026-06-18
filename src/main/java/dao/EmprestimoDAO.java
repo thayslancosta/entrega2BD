@@ -78,11 +78,21 @@ public class EmprestimoDAO {
             statement.executeUpdate();
         }
 
+        String sqlEstoque = "UPDATE Livros "
+                + "SET quantidade_estoque = quantidade_estoque + 1, status = 'DISPONIVEL' "
+                + "WHERE id_livro = (SELECT id_livro_fk FROM Emprestimos WHERE id_emprestimo = ?)";
+
+        try (PreparedStatement statement = conexao.getConexao().prepareStatement(sqlEstoque)) {
+            statement.setInt(1, idEmprestimo);
+            statement.executeUpdate();
+        }
+
         return multa;
     }
 
     public ResultSet listarPorUsuario(int idUsuario) throws SQLException {
-        String sql = "SELECT * FROM Emprestimos WHERE id_usuario_fk = ?";
+        String sql = "SELECT * FROM vw_emprestimos_aluno WHERE id_emprestimo IN "
+                + "(SELECT id_emprestimo FROM Emprestimos WHERE id_usuario_fk = ?)";
         PreparedStatement statement = conexao.getConexao().prepareStatement(sql);
         statement.setInt(1, idUsuario);
         return statement.executeQuery();
